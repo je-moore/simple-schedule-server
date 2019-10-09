@@ -21,6 +21,10 @@ const Plan = database.define(
       allowNull: false,
       primaryKey: true,
     },
+    month: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
     day: {
       type: Sequelize.INTEGER,
       allowNull: false,
@@ -66,23 +70,30 @@ app.get('/plans/:month', (req, res) => {
 
 app.post('/plans', (req, res) => {
   const plan = req.body
-  Plan.create(plan)
-    .then(result => {
-      res
-        .status(201)
-        .send(result)
-        .end()
-    })
-    .catch(err => {
-      res.status(404).end()
-    })
+
+  Plan.findOne({ where: { id: plan.id } }).then(item => {
+    if (!item) {
+      // Item doesn't exist, so we create it
+      Plan.create(plan).then(item => ({ item, created: true }))
+    }
+    // Item already exists, so we update it
+    return Plan.update(plan, { where: { id: plan.id } }).then(item => ({
+      item,
+      created: false,
+    }))
+  })
 })
 
 app.put('/plans/:id', (req, res) => {
   const planId = Number(req.params.id)
   const updates = req.body
+  console.log(updates)
   // find the plan in the DB
-  Plan.findById(planId)
+  Plan.findAll({
+    where: {
+      id: planId,
+    },
+  })
     .then(result => {
       if (!result) {
         res.status(404).send('Not found')
